@@ -1,0 +1,57 @@
+name: Gerar APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Extrair o projeto (se foi enviado como .zip)
+        run: |
+          if [ -f ControleTV-projeto.zip ]; then
+            unzip -o -q ControleTV-projeto.zip
+            echo "Projeto extraído do zip."
+          fi
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Compilar o APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Renomear
+        run: cp app/build/outputs/apk/debug/app-debug.apk ControleTV.apk
+
+      - name: Guardar como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: ControleTV
+          path: ControleTV.apk
+
+      - name: Publicar no Releases (link fixo de download)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: ControleTV – última versão
+          body: |
+            APK gerado automaticamente a partir do commit ${{ github.sha }}.
+            Link direto: https://github.com/${{ github.repository }}/releases/download/latest/ControleTV.apk
+          files: ControleTV.apk
+          make_latest: true
